@@ -1,7 +1,9 @@
 # Mosaic Tile Generator
 
-A browser-based generator for algorithmic mosaic art. It is a single self-contained HTML file —
-no install, no build step, no internet connection required once loaded. Open it and it runs.
+A browser-based generator for algorithmic mosaic art in a mid-century modern idiom — the warm
+palettes, blocky tile fields and panel seams of 1950s and 60s decorative mosaic. It is a single
+self-contained HTML file: no install, no build step, no internet connection required once
+loaded. Open it and it runs.
 
 ## Try it
 
