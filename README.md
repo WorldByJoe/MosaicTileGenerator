@@ -6,13 +6,10 @@ file (or the link below) and it runs.
 
 ## Try them
 
-Once GitHub Pages is switched on for this repository, both live here
-(replace `USERNAME` with your GitHub account name):
-
-- **Mosaic Maker** — `https://USERNAME.github.io/MosaicTileGenerator/`
-  Rectangular tile mosaics with a simulated oil-paint surface.
-- **Hex Mosaic Maker** — `https://USERNAME.github.io/MosaicTileGenerator/hex-mosaic-maker.html`
-  Hexagonal tilings with three pattern engines and a glazed-ceramic finish.
+- **[Mosaic Maker](https://worldbyjoe.github.io/MosaicTileGenerator/)** — rectangular tile
+  mosaics with a simulated oil-paint surface.
+- **[Hex Mosaic Maker](https://worldbyjoe.github.io/MosaicTileGenerator/hex-mosaic-maker.html)** —
+  hexagonal tilings with three pattern engines and a glazed-ceramic finish.
 
 You can also just download either `.html` file and double-click it — they run offline.
 
