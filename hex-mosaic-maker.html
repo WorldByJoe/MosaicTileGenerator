@@ -1,0 +1,1015 @@
+<meta charset="utf-8">
+<title>Hex Mosaic Maker</title>
+<style>
+  /* ---- theme tokens: warm gallery wall (light) / evening studio (dark) ---- */
+  :root{
+    --wall:#e9e3d7; --panel:#f6f2e8; --ink:#2e2820; --muted:#877d6d;
+    --line:#d6cebe; --accent:#3f7d80; --accent-ink:#ffffff;
+    --shadow:0 22px 50px rgba(60,45,25,.38), 0 4px 12px rgba(60,45,25,.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --wall:#161310; --panel:#211d16; --ink:#ece5d6; --muted:#9a9082;
+      --line:#373126; --accent:#6fb0b2; --accent-ink:#10221f;
+      --shadow:0 24px 60px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{
+    --wall:#e9e3d7; --panel:#f6f2e8; --ink:#2e2820; --muted:#877d6d;
+    --line:#d6cebe; --accent:#3f7d80; --accent-ink:#ffffff;
+    --shadow:0 22px 50px rgba(60,45,25,.38), 0 4px 12px rgba(60,45,25,.22);
+  }
+  :root[data-theme="dark"]{
+    --wall:#161310; --panel:#211d16; --ink:#ece5d6; --muted:#9a9082;
+    --line:#373126; --accent:#6fb0b2; --accent-ink:#10221f;
+    --shadow:0 24px 60px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.5);
+  }
+
+  body{ background:var(--wall); color:var(--ink);
+    font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; }
+
+  .wall{ padding:46px 28px 30px; }
+  .art-frame{ max-width:1500px; margin:0 auto; }
+  canvas#art{ display:block; width:100%; height:auto; box-shadow:var(--shadow);
+    border:1px solid rgba(0,0,0,.25); background:#241c14; }
+  canvas#art.trip{ background:transparent; border:none; box-shadow:none; }  /* wall shows between the three panels */
+
+  .placard{ max-width:1500px; margin:14px auto 0; display:flex; gap:14px;
+    align-items:baseline; justify-content:space-between; flex-wrap:wrap; }
+  .placard h1{ font:600 20px/1.2 Georgia, "Iowan Old Style", "Times New Roman", serif;
+    margin:0; letter-spacing:.2px; }
+  .placard .cat{ color:var(--muted); font-size:13px; font-style:italic;
+    font-family:Georgia, serif; }
+
+  .bench{ max-width:1500px; margin:8px auto 60px; }
+  /* toolbar reads left to right as the workflow: make → finish → export, with reference on the right */
+  .toolbar{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:16px 0 20px; }
+  .tbgroup{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .tbgroup + .tbgroup{ margin-left:8px; padding-left:16px; border-left:1px solid var(--line); }
+  .tbgroup.right{ margin-left:auto; }
+  button{ appearance:none; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); border-radius:6px; padding:9px 16px; font:600 14px system-ui,sans-serif;
+    cursor:pointer; }
+  button:hover{ border-color:var(--accent); }
+  button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  button.primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  button.active{ background:var(--ink); border-color:var(--ink); color:var(--wall); }
+  .seedbox{ display:flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; }
+  .seedbox input{ width:90px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); border-radius:6px; padding:8px; font:14px system-ui; }
+  select{ border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:6px; padding:8px; font:14px system-ui; }
+
+  .groups{ display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:18px; }
+  fieldset{ border:1px solid var(--line); border-radius:10px; background:var(--panel);
+    padding:16px 18px 10px; margin:0; }
+  legend{ padding:0 8px; font:700 11px/1 system-ui; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--muted); }
+  .ctl{ display:grid; grid-template-columns:16px 1fr 118px; align-items:center;
+    gap:8px; padding:7px 0; }
+  /* dropdowns carry long option text, so they drop below the label and take the full width */
+  .ctl.sel{ grid-template-columns:16px 1fr; }
+  .ctl.sel select{ grid-column:2; width:100%; }
+  .lk{ padding:0; border:none; background:none; font-size:12px; line-height:1;
+    cursor:pointer; opacity:.35; }
+  .lk:hover{ border:none; }
+  .lk.on{ opacity:1; }
+  .ctl label{ font-size:14px; }
+  .ctl small{ display:block; color:var(--muted); font-size:12px; }
+  input[type=range]{ width:100%; accent-color:var(--accent); }
+  [hidden]{ display:none !important; }   /* keep the hidden attribute winning over display rules below */
+  #inspo img{ display:block; width:100%; height:auto; box-shadow:var(--shadow);
+    border:1px solid rgba(0,0,0,.25); }
+  #inspoEmpty{ padding:60px 24px; text-align:center; color:var(--muted);
+    background:var(--panel); border:1px dashed var(--line); border-radius:10px; }
+  #inspoEmpty p{ margin:0 0 14px; }
+</style>
+
+<div class="wall">
+  <div class="art-frame">
+    <canvas id="art"></canvas>
+    <div id="inspo" hidden>
+      <img id="inspoImg" hidden alt="The original painting that inspired this generator">
+      <div id="inspoEmpty">
+        <p>Load a photo of the original painting to keep it here for reference.<br>
+        It is remembered by this browser afterward.</p>
+        <input type="file" id="inspoFile" accept="image/*">
+      </div>
+    </div>
+  </div>
+  <div class="placard">
+    <h1>Hex Mosaic Maker</h1>
+    <span class="cat" id="cat">No. — · mixed pigments on panel</span>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="toolbar">
+    <div class="tbgroup">                     <!-- make something -->
+      <button class="primary" id="newBtn">🎲 New artwork</button>
+      <button id="wildBtn">🌀 Surprise me</button>
+      <button id="recolorBtn">Repaint colors</button>
+    </div>
+    <div class="tbgroup">                     <!-- finish it -->
+      <button id="brushBtn">🖌 Add brush strokes</button>
+    </div>
+    <div class="tbgroup">                     <!-- take it away -->
+      <button id="saveBtn">Download PNG</button>
+      <select id="exportRes" aria-label="Export resolution">
+        <option value="2000" selected>Screen · 2000 px</option>
+        <option value="4000">Print · 4000 px ≈ 13″ @ 300 dpi</option>
+        <option value="8000">Print · 8000 px ≈ 27″</option>
+        <option value="12000">Print · 12000 px ≈ 40″</option>
+      </select>
+      <button id="loadBtn" title="Restore the settings stored inside a PNG this page exported">Load settings</button>
+      <input type="file" id="metaFile" accept="image/png" hidden>
+    </div>
+    <div class="tbgroup right">
+      <button id="inspoBtn">View inspiration</button>
+      <span class="seedbox">seed <input id="seed" type="number" min="1" max="999999" step="1" value="48213"></span>
+    </div>
+  </div>
+
+  <div class="groups">
+    <fieldset>
+      <legend>Composition</legend>
+      <div class="ctl sel"><label>Canvas shape<small>and the print sizes it fits</small></label>
+        <select id="aspect" data-rebuild="1">
+          <option value="3" selected>Panorama 3:1 · 12×36″</option>
+          <option value="2">Wide 2:1</option>
+          <option value="1.78">Screen 16:9</option>
+          <option value="1.5">Canvas 3:2 · 20×30″, 24×36″</option>
+          <option value="1.33">Classic 4:3 · 18×24″</option>
+          <option value="1.27">Canvas 14:11 · 11×14″</option>
+          <option value="1.25">Canvas 5:4 · 8×10″, 16×20″</option>
+          <option value="1">Square · 8×8″–24×24″</option>
+        </select></div>
+      <div class="ctl sel"><label>Pattern<small>what decides the colors</small></label>
+        <select id="pattern" data-rebuild="1">
+          <option value="fields" selected>Color fields</option>
+          <option value="tri">Pinwheel triangles</option>
+          <option value="truchet">Truchet ribbons</option>
+        </select></div>
+      <div class="ctl sel"><label>Triangle symmetry<small>pinwheel patterns only</small></label>
+        <select id="sym">
+          <option value="alt" selected>Alternating (3-fold)</option>
+          <option value="mirror">Mirrored</option>
+          <option value="point">Point symmetric</option>
+          <option value="free">Free</option>
+        </select></div>
+      <div class="ctl"><label>Ribbon width<small>Truchet patterns only</small></label>
+        <input type="range" id="ribbon" min="0" max="1" step="0.01" value="0.42"></div>
+      <div class="ctl sel"><label>Hex orientation<small>lattice direction</small></label>
+        <select id="orient" data-rebuild="1">
+          <option value="pointy" selected>Pointy-top</option>
+          <option value="flat">Flat-top</option>
+        </select></div>
+      <div class="ctl"><label>Vertical panels<small>full-height seams; 0 = off</small></label>
+        <input type="range" id="panels" data-rebuild="1" min="0" max="8" step="1" value="0"></div>
+      <div class="ctl"><label>Triptych<small>three panels, three files</small></label>
+        <input type="checkbox" id="trip" data-rebuild="1"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tiles</legend>
+      <div class="ctl"><label>Tile size<small>every hexagon, identical</small></label>
+        <input type="range" id="tileSize" data-rebuild="1" min="6" max="70" step="1" value="26"></div>
+      <div class="ctl"><label>Grout<small>dark gap between tiles</small></label>
+        <input type="range" id="gap" min="0" max="8" step="0.5" value="2.5"></div>
+      <div class="ctl"><label>Rounded corners<small>crisp → pebbles</small></label>
+        <input type="range" id="round" min="0" max="1" step="0.01" value="0.05"></div>
+      <div class="ctl"><label>Hand-set<small>slight tilt and uneven grout</small></label>
+        <input type="range" id="handmade" min="0" max="1" step="0.01" value="0.25"></div>
+      <div class="ctl"><label>Wonkiness<small>corners off-true</small></label>
+        <input type="range" id="wonky" min="0" max="1" step="0.01" value="0"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Color</legend>
+      <div class="ctl"><label>Teal &amp; blue<small>cool accent tiles</small></label>
+        <input type="range" id="cool" min="0" max="3" step="0.05" value="1"></div>
+      <div class="ctl"><label>Embers<small>orange &amp; red tiles</small></label>
+        <input type="range" id="ember" min="0" max="3" step="0.05" value="1"></div>
+      <div class="ctl"><label>Darks<small>black &amp; brown tiles</small></label>
+        <input type="range" id="darks" min="0" max="3" step="0.05" value="1"></div>
+      <div class="ctl"><label>Patch size<small>scale of the color zones</small></label>
+        <input type="range" id="patchScale" min="120" max="900" step="10" value="380"></div>
+      <div class="ctl"><label>Color patchiness<small>colors cluster locally</small></label>
+        <input type="range" id="colorPatch" min="0" max="1" step="0.01" value="0.55"></div>
+      <div class="ctl"><label>Shade variation<small>tile-to-tile wobble</small></label>
+        <input type="range" id="jitter" min="0" max="1" step="0.01" value="0.45"></div>
+      <div class="ctl"><label>Color runs<small>same-color courses</small></label>
+        <input type="range" id="runs" min="0" max="1" step="0.01" value="0.4"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Finish</legend>
+      <!-- driven by the toolbar button; hidden so it still travels in PNG metadata -->
+      <input type="checkbox" id="flat" hidden>
+      <div class="ctl"><label>Glaze pooling<small>dark rim, clear centre</small></label>
+        <input type="range" id="brush" min="0" max="1" step="0.01" value="0.5"></div>
+      <div class="ctl"><label>Surface relief<small>how tiles catch the light</small></label>
+        <input type="range" id="visc" min="0" max="1" step="0.01" value="0.45"></div>
+      <div class="ctl"><label>Crazing<small>fine crackle web</small></label>
+        <input type="range" id="craze" min="0" max="1" step="0.01" value="0.18"></div>
+      <div class="ctl"><label>Aging<small>darkened edges &amp; wash</small></label>
+        <input type="range" id="aging" min="0" max="1" step="0.01" value="0.4"></div>
+      <div class="ctl"><label>Surface grain<small>fine tooth in the glaze</small></label>
+        <input type="range" id="weave" min="0" max="1" step="0.01" value="0.2"></div>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =============================================================
+   Mosaic Maker — recursive-subdivision tile painting generator
+   Rules of the algorithm:
+   1. A smooth random "detail map" says where tiles should be
+      big vs. tiny (zones, not uniform noise). "Smallest/Largest
+      tile" bound the sizes; "Fine/Coarse coverage" shape the
+      frequency distribution at each end (both high = bimodal).
+      "Golden ratio" steers cuts toward φ proportions and snaps
+      every drawn tile to an exact golden rectangle.
+   2. The canvas is first pre-cut into a few slightly uneven
+      full-height vertical panels ("Vertical panels"), like the
+      source painting's panel seams; each panel is then cut
+      recursively. "Triptych" instead forces three equal panels
+      shown with wall gaps and exported as three files. Cuts are often exact halves or thirds
+      ("Alignment") so seams line up like real tilework.
+      Detailed zones may burst into little uniform grids of
+      tiny squares ("Tiny-tile clusters").
+   3. Each tile picks a color from a weighted warm palette;
+      slow-varying random maps make teal / ember / dark tiles
+      cluster in neighborhoods ("Color patchiness"). Two color
+      arrangements from the source painting sit on top: some
+      burst grids checker two alternating tones, and "Color
+      runs" paints same-color courses of small tiles that cut
+      horizontally across the panel.
+   4. Paint rendering: a physical paint engine. Every stroke
+      carries the tile's own pigment with a bristle body, a cast
+      shadow and a ridge catch-light, all lit from the upper
+      left; brush widths are quantized (three brushes for the
+      whole painting); "Viscosity" sets ridge height, opacity
+      and wander. Stroke patterns: dragged / cross-hatch /
+      scumble / knife dabs / smooth wash / mixed. Each tile edge
+      gets the same directional relief, and "Canvas weave" lays
+      a linen ground over everything. Plus rim pooling, specks,
+      optional crazing. The "Handmade"
+      slider adds hand-set irregularity: tile tilt, uneven
+      grout width, and mottled grout color. "Rounded corners"
+      and "Wonkiness" reshape each tile from crisp rectangle
+      toward pebble / off-square quad (geometry-seeded, so
+      repaint never moves them).
+   All randomness flows from the seed: the layout, the colors,
+   and the brushwork each get their own stream. "Repaint colors"
+   keeps the layout and deterministically re-pigments it as
+   variant .1, .2, ... — the placard "No. seed.variant" fully
+   identifies any artwork.
+   ============================================================= */
+
+/* ---------- seeded randomness ---------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+function ihash(x,y,s){ let h=Math.imul(x|0,0x27d4eb2d)^Math.imul(y|0,0x165667b1)^Math.imul(s|0,0x9e3779b9);
+  h=Math.imul(h^(h>>>15),0x85ebca6b); h=Math.imul(h^(h>>>13),0xc2b2ae35); h^=h>>>16;
+  return (h>>>0); }
+/* value noise in [0,1], smooth zones used for the detail & color maps */
+function vnoise(x,y,s){ const ix=Math.floor(x), iy=Math.floor(y), fx=x-ix, fy=y-iy;
+  const a=ihash(ix,iy,s)/4294967296, b=ihash(ix+1,iy,s)/4294967296,
+        c=ihash(ix,iy+1,s)/4294967296, d=ihash(ix+1,iy+1,s)/4294967296;
+  const ux=fx*fx*(3-2*fx), uy=fy*fy*(3-2*fy);
+  return a+(b-a)*ux+(c-a)*uy+(a-b-c+d)*ux*uy; }
+function fbm(x,y,s){ return 0.65*vnoise(x,y,s)+0.35*vnoise(x*2.7+13.1,y*2.7+7.7,s^0x51ab); }
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+/* colors travel as {h,s,l} so the paint engine can mix tints from each tile's pigment */
+const hslCss=(o,dl=0,ds=0,dh=0)=>`hsl(${(o.h+dh).toFixed(1)} ${clamp(o.s+ds,3,88).toFixed(1)}% ${clamp(o.l+dl,2,96).toFixed(1)}%)`;
+
+/* ---------- mechanical paint engine: pigment math, bristle footprints, relief ---------- */
+/* raking light over the accumulated height field. Highlight = height minus itself shifted
+   toward the light (destination-out on alpha), tinted, composited. drawImage-only: no
+   getImageData (a 12000px export field is huge), no ctx.filter / shadow* (Safari + CTM-unsafe).
+   Offsets are DEVICE px composited under identity => relief scales with print size. */
+function applyRelief(c,hc,p){
+  if(hc.width*hc.height>1.5e8) return;                  // huge-square-export insurance (Safari canvas caps)
+  const S=c.getTransform().a, d=(0.7+1.1*p.visc)*S;
+  const sc=document.createElement('canvas'); sc.width=hc.width; sc.height=hc.height;
+  const g2=sc.getContext('2d');
+  const pass2=(dx,dy,tint,gco,ga)=>{
+    g2.clearRect(0,0,sc.width,sc.height);
+    g2.globalCompositeOperation='source-over';      g2.drawImage(hc,0,0);
+    g2.globalCompositeOperation='destination-out';  g2.drawImage(hc,dx,dy);
+    g2.globalCompositeOperation='source-in';        g2.fillStyle=tint; g2.fillRect(0,0,sc.width,sc.height);
+    c.save(); c.setTransform(1,0,0,1,0,0);          // device space: d already carries S
+    c.globalCompositeOperation=gco; c.globalAlpha=ga; c.drawImage(sc,0,0); c.restore();
+  };
+  const k=0.25+0.5*Math.min(1,p.visc*0.75+p.brush*0.6); // lighting strength: Viscosity + Texture
+  pass2( d, d,'rgb(255,247,228)','screen',   0.42*k);   // NW-facing crests catch the light
+  pass2(-d,-d,'rgb(28,17,8)',   'multiply', 0.30*k);    // SE-facing sides fall into shadow (kept
+                                                        // under the highlight so relief adds no net tint)
+  sc.width=sc.height=0;                                 // drop the scratch backing store eagerly (Safari memory accounting)
+}
+
+/* ---------- palette sampled from the source painting (HSL) ---------- */
+const PAL={
+  light:[[44,40,88],[46,32,92],[48,50,79]],
+  yellow:[[47,55,68],[44,58,58],[40,55,50]],
+  ochre:[[33,55,46],[27,55,40]],
+  ember:[[19,62,48],[13,63,38],[22,64,54]],
+  teal:[[183,26,52],[190,30,40],[178,30,63]],
+  olive:[[55,25,50],[85,14,52]],
+  brown:[[28,32,32],[26,33,22]],
+  dark:[[30,20,14],[24,12,8]] };
+const BASEW={light:16,yellow:9.5,ochre:6,ember:4.5,teal:4,olive:2.5,brown:2.8,dark:2.2};
+
+/* ---------- state ---------- */
+const CANVAS_W=2000;
+let seed=48213, paintNo=0, colorSeed=48213*7+3, tiles=[], curW=CANVAS_W, curH=0;
+const $=id=>document.getElementById(id);
+const canvas=$('art'), ctx=canvas.getContext('2d');
+
+function params(){ return {
+  aspect:parseFloat($('aspect').value),
+  tileSize:parseFloat($('tileSize').value),
+  pattern:$('pattern').value,
+  sym:$('sym').value,
+  ribbon:parseFloat($('ribbon').value),
+  flatTop:$('orient').value==='flat',
+  trip:$('trip').checked,
+  flat:$('flat').checked,
+  visc:parseFloat($('visc').value),
+  patchScale:parseFloat($('patchScale').value),
+  panels:parseInt($('panels').value,10),
+  gap:parseFloat($('gap').value),
+  cool:parseFloat($('cool').value),
+  ember:parseFloat($('ember').value),
+  darks:parseFloat($('darks').value),
+  colorPatch:parseFloat($('colorPatch').value),
+  jitter:parseFloat($('jitter').value),
+  brush:parseFloat($('brush').value),
+  aging:parseFloat($('aging').value),
+  craze:parseFloat($('craze').value),
+  weave:parseFloat($('weave').value),
+  handmade:parseFloat($('handmade').value),
+  runs:parseFloat($('runs').value),
+  round:parseFloat($('round').value),
+  wonky:parseFloat($('wonky').value) }; }
+
+/* ---------- rule 1+2: recursive subdivision guided by the detail map ---------- */
+/* ---------- polygon helpers: every tile is now an arbitrary polygon ---------- */
+function polyCentroid(P){
+  let a=0,cx=0,cy=0;
+  for(let i=0;i<P.length;i++){ const j=(i+1)%P.length;
+    const f=P[i][0]*P[j][1]-P[j][0]*P[i][1];
+    a+=f; cx+=(P[i][0]+P[j][0])*f; cy+=(P[i][1]+P[j][1])*f; }
+  a*=0.5;
+  if(Math.abs(a)<1e-9){ let sx=0,sy=0; P.forEach(v=>{sx+=v[0];sy+=v[1];});
+    return {cx:sx/P.length,cy:sy/P.length,area:0}; }
+  return {cx:cx/(6*a), cy:cy/(6*a), area:Math.abs(a)};
+}
+/* principal axis: brush lanes should run along a tile's own elongation, not the screen axes */
+function polyAxis(P,cx,cy){
+  let sxx=0,syy=0,sxy=0;
+  for(const v of P){ const dx=v[0]-cx, dy=v[1]-cy; sxx+=dx*dx; syy+=dy*dy; sxy+=dx*dy; }
+  const ang=0.5*Math.atan2(2*sxy,sxx-syy), ca=Math.cos(ang), sa=Math.sin(ang);
+  let u0=-1e9,u1=1e9,v0=-1e9,v1=1e9;
+  for(const v of P){ const dx=v[0]-cx, dy=v[1]-cy;
+    const u=dx*ca+dy*sa, w2=-dx*sa+dy*ca;
+    u0=Math.max(u0,u); u1=Math.min(u1,u); v0=Math.max(v0,w2); v1=Math.min(v1,w2); }
+  return {ang, ext:Math.max(1,u0-u1), sh:Math.max(1,v0-v1)};
+}
+function insetPoly(P,cx,cy,d){
+  const n=P.length, L=[];
+  for(let i=0;i<n;i++){
+    const a=P[i], b=P[(i+1)%n];
+    let dx=b[0]-a[0], dy=b[1]-a[1];
+    const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
+    let nx=-dy, ny=dx;                                   // whichever normal faces the interior
+    const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
+    if((cx-mx)*nx+(cy-my)*ny<0){ nx=-nx; ny=-ny; }
+    L.push([a[0]+nx*d, a[1]+ny*d, dx, dy]);
+  }
+  const out=[];
+  for(let i=0;i<n;i++){                                  // each corner is where two offset edges meet
+    const q=L[(i-1+n)%n], r=L[i];
+    const den=q[2]*r[3]-q[3]*r[2];
+    if(Math.abs(den)<1e-6){ out.push([r[0],r[1]]); continue; }
+    const t=((r[0]-q[0])*r[3]-(r[1]-q[1])*r[2])/den;
+    out.push([q[0]+q[2]*t, q[1]+q[3]*t]);
+  }
+  return out;
+}
+function finishTile(poly,extra){
+  const c=polyCentroid(poly), a=polyAxis(poly,c.cx,c.cy);
+  return Object.assign({poly,cx:c.cx,cy:c.cy,area:c.area,ang:a.ang,ext:a.ext,sh:a.sh},extra||{});
+}
+/* keep the half-plane nearer to the reference point (Sutherland-Hodgman, one edge) */
+function clipHalf(P,mx,my,nx,ny){
+  const side=v=>(v[0]-mx)*nx+(v[1]-my)*ny, out=[];
+  for(let i=0;i<P.length;i++){
+    const a=P[i], b=P[(i+1)%P.length], sa=side(a), sb=side(b);
+    if(sa<=0) out.push(a);
+    if((sa<0&&sb>0)||(sa>0&&sb<0)){ const t=sa/(sa-sb);
+      out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]); }
+  }
+  return out;
+}
+/* the panel seams a tile may never cross (vertical panels, and the triptych cuts) */
+function panelEdges(W,p){
+  const e=[0];
+  if(p.trip) for(let k=1;k<3;k++) e.push(W*k/3);
+  else if(p.panels>=2){
+    const rng=mulberry32(ihash(seed,11,977)), wts=[]; let tot=0;
+    for(let k=0;k<p.panels;k++){ const v=1+0.35*(rng()-0.5); wts.push(v); tot+=v; }
+    let px=0; for(let k=0;k<p.panels-1;k++){ px+=W*wts[k]/tot; e.push(px); }
+  }
+  e.push(W); return e;
+}
+const panelOf=(x,E)=>{ let k=0; while(k<E.length-2 && x>=E[k+1]) k++; return k; };
+
+/* ---------- hex lattice ---------- */
+function hexCells(W,H,s,flat){
+  // s is the centre-to-vertex radius. Cells are keyed by rounded centre so neighbours can be
+  // looked up positionally — no axial-coordinate conventions to get wrong.
+  const cells=[], byKey=new Map(), key=(x,y)=>Math.round(x*4)+','+Math.round(y*4);
+  const stepX= flat? s*1.5 : s*Math.sqrt(3), stepY= flat? s*Math.sqrt(3) : s*1.5;
+  const nx=Math.ceil(W/stepX)+3, ny=Math.ceil(H/stepY)+3;
+  for(let j=-1;j<ny;j++) for(let i=-1;i<nx;i++){
+    const cx= flat? i*stepX : i*stepX+((j&1)?stepX/2:0);
+    const cy= flat? j*stepY+((i&1)?stepY/2:0) : j*stepY;
+    if(cx<-s*2||cx>W+s*2||cy<-s*2||cy>H+s*2) continue;
+    const V=[]; for(let k=0;k<6;k++){ const a=(Math.PI/180)*(flat? 60*k : 60*k+30);
+      V.push([cx+s*Math.cos(a), cy+s*Math.sin(a)]); }
+    const nb=[]; for(let k=0;k<6;k++){ const a=V[k], b=V[(k+1)%6];
+      nb.push(key(cx+((a[0]+b[0])/2-cx)*2, cy+((a[1]+b[1])/2-cy)*2)); }  // mirror the edge midpoint
+    const cell={cx,cy,V,nb,k:key(cx,cy),used:false};
+    cells.push(cell); byKey.set(cell.k,cell);
+  }
+  return {cells,byKey};
+}
+/* Every hexagon is identical. Size variety is deliberately gone — the interest lives in the
+   PATTERN layer instead, which is how hexagonal tile design actually works. Three engines:
+   whole-hex colour fields, each hex split into six triangles, and Truchet arcs whose ends
+   meet across seams so ribbons wander the whole panel. */
+function clipPanel(poly,pk,E){
+  if(E.length<=2) return poly;
+  poly=clipHalf(poly,E[pk],0,-1,0);                  // keep x >= this panel's left edge
+  if(poly.length<3) return poly;
+  return clipHalf(poly,E[pk+1],0,1,0);               // ...and x <= its right edge
+}
+function buildTiles(W,H,p){
+  const s=Math.max(4,p.tileSize);
+  const {cells}=hexCells(W,H,s,p.flatTop);
+  const E=panelEdges(W,p), out=[];
+  for(const c of cells){
+    if(c.cx<-s||c.cx>W+s||c.cy<-s||c.cy>H+s) continue;
+    const pk=panelOf(c.cx,E);
+    if(p.pattern==='tri'){
+      // six triangles radiating from the centre; neighbouring hexes' triangles meet across
+      // the seam, so matching colours fuse into rhombi and stars bigger than the tile
+      for(let k=0;k<6;k++){
+        const tri=clipPanel([[c.cx,c.cy],c.V[k],c.V[(k+1)%6]],pk,E);
+        if(tri.length>=3) out.push(finishTile(tri,{hx:c.cx,hy:c.cy,tri:k}));
+      }
+    }else{
+      const poly=clipPanel(c.V,pk,E);
+      if(poly.length>=3) out.push(finishTile(poly,
+        {hx:c.cx,hy:c.cy,hs:s,hexV:c.V,truchet:p.pattern==='truchet'}));
+    }
+  }
+  return out;
+}
+/* which triangles must share a colour, so the hex reads as a deliberate motif */
+function symOrbit(k,sym){
+  if(sym==='alt') return k%2;                        // three-fold: two alternating tones
+  if(sym==='mirror') return Math.min(k,(6-k)%6);     // bilateral, three tones
+  if(sym==='point') return k%3;                      // two-fold, three tones
+  return k;                                          // free: all six independent
+}
+function pickColor(t,i,p,rr){
+  if(t.tri!==undefined){        // one stream per (hex, orbit): same orbit always same colour
+    rr=mulberry32(ihash(Math.round(t.hx*7)+Math.round(t.hy*13), symOrbit(t.tri,p.sym), colorSeed^0x5A));
+  }
+  const cx=(t.hx!==undefined? t.hx : t.cx), cy=(t.hy!==undefined? t.hy : t.cy), cs=430;
+  const jit=(m,hj,sj,lj)=>({ h:m[0]+(rr()-0.5)*hj,
+    s:clamp(m[1]+(rr()-0.5)*sj,5,75), l:clamp(m[2]+(rr()-0.5)*lj,4,94) });
+  // some burst grids checker two alternating tones (the dotted speckle in the source painting)
+  if(t.gid!==undefined && ihash(t.gid,3,colorSeed)/4294967296<0.5){
+    const PAIRS=[[[46,34,90],[26,16,10]],[[46,34,90],[185,28,48]],
+                 [[46,34,90],[17,62,46]],[[44,56,58],[26,16,10]]];
+    const pr=PAIRS[ihash(t.gid,5,colorSeed)%PAIRS.length];
+    return jit(pr[t.par],4,18*p.jitter,19*p.jitter);
+  }
+  // color runs: a hex lattice has THREE natural directions, so courses can travel along
+  // any of them; one direction is picked per artwork. Small tiles only, as before.
+  if(p.runs>0.01 && t.sh<40 && t.ext<70){
+    const dir=(ihash(7,11,colorSeed)%3)*Math.PI/3, cd=Math.cos(dir), sd=Math.sin(dir);
+    const band=Math.round((cx*sd+cy*cd)/34), seg=Math.floor((cx*cd-cy*sd)/360);
+    if(ihash(band,seg,colorSeed^0x77)/4294967296 < 0.55*p.runs){
+      const v=ihash(band,seg,colorSeed^0x88)/4294967296;
+      const m= v<0.35?[46,36,90] : v<0.55?[44,58,58] : v<0.75?[183,28,50]
+             : v<0.9 ?[19,62,46] : [26,18,10];
+      return jit(m,3,10*p.jitter,15*p.jitter);
+    }
+  }
+  const fCool =fbm(cx/cs,cy/cs,colorSeed^0x11);
+  const fEmber=fbm(cx/cs+53,cy/cs,colorSeed^0x22);
+  const fDark =fbm(cx/cs,cy/cs+53,colorSeed^0x33);
+  const fLight=fbm(cx/cs+99,cy/cs+99,colorSeed^0x44);
+  const st=2.8*p.colorPatch;
+  const f=v=>Math.pow(Math.max(0.05,2*v),st);        // cluster multiplier from a slow map
+  const w={
+    light:BASEW.light*Math.pow(Math.max(0.05,2*fLight),st*0.5),
+    yellow:BASEW.yellow*Math.pow(Math.max(0.05,2*fLight),st*0.3),
+    ochre:BASEW.ochre,
+    ember:BASEW.ember*p.ember*f(fEmber),
+    teal:BASEW.teal*p.cool*f(fCool),
+    olive:BASEW.olive,
+    brown:BASEW.brown*p.darks*Math.pow(Math.max(0.05,2*fDark),st*0.6),
+    dark:BASEW.dark*p.darks*f(fDark) };
+  // little tiles skew to punchy accents; big tiles skew warm & pale
+  const a=t.area;
+  if(a<26*26){ w.dark*=1.7; w.teal*=1.5; w.ember*=1.35; }
+  if(a>120*120){ w.light*=1.6; w.yellow*=1.3; w.dark*=0.6; }
+  let tot=0; for(const g in w) tot+=w[g];
+  let x=rr()*tot, group='light';
+  for(const g in w){ if((x-=w[g])<=0){ group=g; break; } }
+  const m=PAL[group][Math.floor(rr()*PAL[group].length)];
+  return { h:m[0]+(rr()-0.5)*6,
+           s:clamp(m[1]+(rr()-0.5)*14*p.jitter,5,75),
+           l:clamp(m[2]+(rr()-0.5)*24*p.jitter,4,94) };
+}
+
+/* ---------- rule 4: paint the tiles ---------- */
+function paintGround(c,p){
+  c.fillStyle='#241c14'; c.fillRect(0,0,curW,curH);       // grout ground
+  if(p.handmade>0.02){                                    // mottled grout: warm/dark patches show in the gaps
+    const gm=mulberry32(ihash(9,17,colorSeed));
+    for(let gy=0;gy<curH;gy+=64) for(let gx=0;gx<curW;gx+=64){
+      const wmt=gm(), al=(0.20*p.handmade*gm()).toFixed(3);
+      c.fillStyle=`rgba(${Math.round(40+34*wmt)},${Math.round(26+20*wmt)},${Math.round(12+10*wmt)},${al})`;
+      c.fillRect(gx,gy,64,64);
+    }
+  }
+}
+function drawTile(sf,p,i){     // one tile, fully self-contained: every stream is keyed on i
+  const {c,hctx,S}=sf;         // colour canvas, shared height field, device scale
+  const tilePath=(g,P,r)=>{                              // rounded polygon of any vertex count
+    const n=P.length, mid=(u,v)=>[(u[0]+v[0])/2,(u[1]+v[1])/2];
+    g.beginPath();
+    const m0=mid(P[0],P[1]); g.moveTo(m0[0],m0[1]);
+    for(let k=1;k<=n;k++){ const cp=P[k%n], nx=mid(P[k%n],P[(k+1)%n]);
+      g.arcTo(cp[0],cp[1],nx[0],nx[1],r); }
+    g.closePath(); };
+    const t=tiles[i];
+    const rr=mulberry32(ihash(i,1013,colorSeed));        // per-tile color stream
+    const colO=pickColor(t,i,p,rr);                      // pigment as {h,s,l}: the paint engine mixes tints from it
+    const col=hslCss(colO);
+    const rb=mulberry32(ihash(i,3041,colorSeed));        // paint-texture stream: independent of pickColor's branch
+    const rg=mulberry32(ihash(i,2027,seed));             // geometry stream keyed on layout seed: repaint never moves tiles
+    const jx=(rg()-0.5)*3.0*p.handmade, jy=(rg()-0.5)*3.0*p.handmade;
+    const gvar=1+(rg()-0.5)*1.4*p.handmade;              // uneven grout width
+    const rot=(rg()-0.5)*0.12*p.handmade;                // hand-set tilt, up to ~±3.4°
+    // grout: pull every vertex straight in toward the centre, so the seam is even around
+    // the tile whatever its shape. Wonkiness then nudges each corner off true.
+    const gI=clamp(p.gap*gvar,0,t.sh*0.42)/2;
+    const wk=p.wonky*0.16*t.sh;
+    let inp=insetPoly(t.poly,t.cx,t.cy,gI);
+    const okArea=polyCentroid(inp).area;                  // a heavy inset can fold a thin clump
+    if(!(okArea>t.area*0.12)) inp=t.poly.map(v=>[t.cx+(v[0]-t.cx)*0.8, t.cy+(v[1]-t.cy)*0.8]);
+    const pts=inp.map(v=>[v[0]+(rg()-0.5)*wk+jx, v[1]+(rg()-0.5)*wk+jy]);
+    // bounding box: scattered paint effects work inside it and get clipped to the tile
+    let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9;
+    pts.forEach(v=>{ bx0=Math.min(bx0,v[0]); by0=Math.min(by0,v[1]);
+                     bx1=Math.max(bx1,v[0]); by1=Math.max(by1,v[1]); });
+    const x=bx0, y=by0, w=Math.max(1,bx1-bx0), h=Math.max(1,by1-by0);
+    let minEdge=1e9;                                     // arcTo misbehaves past half the shortest edge
+    for(let k=0;k<pts.length;k++){ const q=pts[(k+1)%pts.length];
+      minEdge=Math.min(minEdge,Math.hypot(q[0]-pts[k][0],q[1]-pts[k][1])); }
+    // rounding scales with the EDGE, not the tile: a merged clump's sides are one hex-side
+    // long, so tile-scaled rounding scalloped every corner into a blob. At full slider a
+    // single hexagon rounds all the way to a circle.
+    const rad=Math.min(0.6+p.round*1.2*minEdge, 0.86*minEdge);
+    // tile-local frame so brush lanes follow the tile's own long axis
+    const ext=Math.max(4,t.ext-2*gI), shr=Math.max(3,t.sh-2*gI);
+    const ca=Math.cos(t.ang), sa=Math.sin(t.ang), ccx=t.cx+jx, ccy=t.cy+jy;
+    const L2W=(u,v)=>[ccx+u*ca-v*sa, ccy+u*sa+v*ca];
+    c.save(); hctx.save();     // height field mirrors every tile transform exactly
+    c.translate(x+w/2,y+h/2); c.rotate(rot); c.translate(-x-w/2,-y-h/2);
+    hctx.translate(x+w/2,y+h/2); hctx.rotate(rot); hctx.translate(-x-w/2,-y-h/2);
+    if(p.flat){                                          // Flat color: homogeneous tile, no brushwork
+      c.fillStyle=hslCss(colO); tilePath(c,pts,rad); c.fill();
+    }else{
+      // Imprimatura: the tile's own pigment, only a hair darker/warmer. It used to be much
+      // darker, but strokes never cover 100%, so that darkness showed through and the painted
+      // tile read as a different colour from the flat one. Keeping the ground at the true
+      // pigment makes brushwork a texture change, not a colour change.
+      // Exactly the flat colour, fully opaque. Any darkening or transparency here survives
+      // wherever strokes don't cover, which made painting a tile shift its whole colour.
+      // Strokes vary around this ground, so switching brushwork on is texture-only.
+      c.fillStyle=hslCss(colO);
+      tilePath(c,pts,rad); c.fill();
+    }
+    hctx.globalAlpha=0.15; hctx.fillStyle='#fff';        // slab plateau: global relief re-creates the tile bevel
+    tilePath(hctx,pts,rad); hctx.fill(); hctx.globalAlpha=1;
+    // Two pickup tones for stroke heads — one dirty-dark, one chalky-light. Strokes pick one at
+    // random, so the brushwork reads strongly while averaging out to the tile's true colour.
+    // uneven wash toward one side
+    const side=Math.floor(rb()*4);                       // drawn unconditionally so the Aging slider can't re-phase the stream
+    if(p.aging>0.02){
+      const gr= side===0? c.createLinearGradient(x,y,x+w,y)
+              : side===1? c.createLinearGradient(x+w,y,x,y)
+              : side===2? c.createLinearGradient(x,y,x,y+h)
+              :           c.createLinearGradient(x,y+h,x,y);
+      gr.addColorStop(0,`rgba(38,24,10,${(0.13*p.aging).toFixed(3)})`);
+      gr.addColorStop(1,'rgba(38,24,10,0)');
+      c.fillStyle=gr; tilePath(c,pts,rad); c.fill();
+    }
+    // paint texture: full-span decoration reads as material, never as a figure
+    const long=Math.max(w,h), short=Math.min(w,h), horiz=w>=h;
+    if(!p.flat && p.brush>0.02 && w>4 && h>4){
+      c.save(); tilePath(c,pts,rad); c.clip();
+      hctx.save(); tilePath(hctx,pts,rad); hctx.clip(); // stamps deposit height inside the same clip
+      // glaze pooling: faintly dark rim, clear centre
+      const px0=x+w*(0.35+0.3*rb()), py0=y+h*(0.35+0.3*rb());
+      const pool=c.createRadialGradient(px0,py0,short*0.15,px0,py0,long*0.75);
+      pool.addColorStop(0,'rgba(30,20,10,0)');
+      pool.addColorStop(1,`rgba(30,20,10,${(0.045*p.brush).toFixed(3)})`);  // light touch: pooling must not tint the tile
+      c.fillStyle=pool; c.fillRect(x-2,y-2,w+4,h+4);
+      /* ---- paint engine ----------------------------------------------------
+         Every stroke is PAINT, not a gray line: it carries the tile's pigment
+         (jittered), a bristle body of parallel sub-strokes, a cast shadow and
+         a ridge catch-light — all lit from the upper-left so the whole panel
+         reads as one physically painted surface. Brush widths are quantized
+         (a painter owns three brushes); Viscosity sets ridge height, opacity
+         and how far a runny stroke wanders. --------------------------------- */
+      /* ---- Truchet ribbons: arcs joining edge midpoints. Their ends land exactly on the
+         seam midpoints, so a neighbour's arc continues the line and ribbons wander the whole
+         panel from a purely local rule. Two rotations give every valid pairing. ---- */
+      if(t.truchet && p.ribbon>0.02){
+        const rt=mulberry32(ihash(Math.round(t.hx),Math.round(t.hy),colorSeed^0x9C));
+        const st0=Math.floor(rt()*2);
+        const rc0=ihash(3,5,colorSeed)/4294967296<0.5? {h:28,s:22,l:13} : {h:44,s:34,l:88};
+        c.strokeStyle=hslCss(rc0,(rt()-0.5)*5,0);
+        c.lineCap='butt';
+        c.lineWidth=Math.max(1,p.ribbon*0.55*t.hs);
+        const md=(u,v)=>[(u[0]+v[0])/2,(u[1]+v[1])/2];
+        for(let k=st0;k<6;k+=2){
+          const V1=t.hexV[(k+1)%6];
+          const M0=md(t.hexV[k],V1), M1=md(V1,t.hexV[(k+2)%6]);
+          const a0=Math.atan2(M0[1]-V1[1],M0[0]-V1[0]);
+          const a1=Math.atan2(M1[1]-V1[1],M1[0]-V1[0]);
+          const rr0=Math.hypot(M0[0]-V1[0],M0[1]-V1[1]);
+          let d=a1-a0; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+          c.beginPath(); c.arc(V1[0],V1[1],rr0,a0,a0+d,d<0); c.stroke();
+        }
+        c.globalAlpha=1;
+      }
+      c.globalAlpha=1;
+      // kiln specks: sparse dark flecks, mostly on the larger tiles
+      const ns=Math.min(12,Math.round(p.brush*w*h/2600));
+      for(let k=0;k<ns;k++){
+        const sx=x+rb()*w, sy=y+rb()*h, sr=0.5+0.9*rb();
+        c.fillStyle=`rgba(40,24,12,${(0.10+0.16*rb()).toFixed(3)})`;
+        c.beginPath(); c.arc(sx,sy,sr,0,6.2832); c.fill();
+      }
+      c.restore(); hctx.restore();
+    }
+    // crazing: kinked hairline cracks — own gate and own stream, independent of the Texture slider
+    if(p.craze>0.02 && short>14 && w>4 && h>4){
+      c.save(); tilePath(c,pts,rad); c.clip();
+      const rc=mulberry32(ihash(i,5077,colorSeed));
+      const nc=Math.min(16,Math.round(p.craze*w*h/2000));
+      c.lineWidth=0.5;
+      for(let k=0;k<nc;k++){
+        c.strokeStyle=`rgba(35,22,10,${(0.06+0.10*rc()).toFixed(3)})`;
+        let cx2=x+rc()*w, cy2=y+rc()*h, ang=rc()*6.2832;
+        c.beginPath(); c.moveTo(cx2,cy2);
+        const segs=3+Math.floor(rc()*5);
+        for(let s2=0;s2<segs;s2++){
+          ang+=(rc()-0.5)*1.4;
+          cx2+=Math.cos(ang)*(4+7*rc()); cy2+=Math.sin(ang)*(4+7*rc());
+          c.lineTo(cx2,cy2);
+        }
+        c.stroke();
+      }
+      c.restore();
+    }
+    // faint painted outline where the brush stopped at the block's edge
+    // (edge lighting now comes from the global relief pass over the height plateau)
+    c.strokeStyle=`rgba(45,28,14,${(0.10+0.18*p.aging).toFixed(3)})`;
+    c.lineWidth=1;
+    tilePath(c,pts,rad); c.stroke();
+    c.restore(); hctx.restore();                         // undo this tile's tilt
+}
+function paintWeave(c,p){
+  // canvas weave: the linen ground of the whole painting, woven from warp and weft threads
+  if(p.weave>0.02){
+    const wv=document.createElement('canvas'); wv.width=128; wv.height=128;
+    const g2=wv.getContext('2d'); const wr=mulberry32(ihash(3,9,seed));
+    g2.fillStyle='rgb(127,127,127)'; g2.fillRect(0,0,128,128);
+    for(let yy=0;yy<128;yy+=3)                           // weft
+      for(let xx=0;xx<128;xx+=8){
+        const lum=112+Math.floor(wr()*30)+(((yy/3)|0)%2?8:-8);
+        g2.fillStyle=`rgb(${lum},${lum},${lum})`; g2.fillRect(xx,yy,8,2);
+      }
+    for(let xx=0;xx<128;xx+=3)                           // warp over
+      for(let yy=0;yy<128;yy+=9){
+        const lum=112+Math.floor(wr()*30)+(((xx/3)|0)%2?9:-9);
+        g2.fillStyle=`rgba(${lum},${lum},${lum},0.6)`; g2.fillRect(xx,yy,2,9);
+      }
+    c.save();
+    c.globalCompositeOperation='overlay'; c.globalAlpha=0.9*p.weave;
+    c.fillStyle=c.createPattern(wv,'repeat'); c.fillRect(0,0,curW,curH);
+    c.restore(); c.globalAlpha=1;
+  }
+}
+function paintChunked(c,p,onDone){
+  // time-sliced painter: identical output (every tile keys on its index), but never blocks the page;
+  // returns a handle whose cancel() aborts a stale pass when a slider re-triggers painting.
+  // Owns the shared height field: allocated per pass, relief composited at the finish —
+  // an aborted pass simply drops it.
+  const pass={cancelled:false, cancel(){ pass.cancelled=true; }};
+  paintGround(c,p);
+  const S=c.getTransform().a;                           // export scale, used by the relief pass
+  const hc=document.createElement('canvas');            // height field: ALPHA = paint thickness, transparent = 0
+  hc.width=c.canvas.width; hc.height=c.canvas.height;   // device-sized
+  const hctx=hc.getContext('2d');
+  hctx.setTransform(c.getTransform());                  // same CTM: logical coords land on the same pixels
+  if(p.weave>0.02){                                     // canvas tooth: relief lights the weave where paint is thin
+    hctx.globalAlpha=0.05*p.weave; hctx.fillStyle='#fff';
+    for(let yy=0;yy<curH;yy+=3) hctx.fillRect(0,yy,curW,1);
+    hctx.globalAlpha=1;
+  }
+  const sf={c,hctx,S};
+  let i=0;
+  const step=()=>{
+    if(pass.cancelled) return;
+    const t0=performance.now();
+    while(i<tiles.length && performance.now()-t0<12) drawTile(sf,p,i++);
+    if(i<tiles.length) requestAnimationFrame(step);
+    else{
+      applyRelief(c,hc,p);
+      hc.width=hc.height=0;                             // height field is per-pass: free it before PNG encoding
+      paintWeave(c,p); if(onDone) onDone();
+      if(livePass===pass) livePass=null;                // let a completed pass (and its canvases) be collected
+    }
+  };
+  step();
+  return pass;
+}
+let livePass=null;             // the in-flight interactive paint, cancelled by the next one
+function render(){
+  const p=params();
+  canvas.classList.toggle('trip',p.trip);
+  if(livePass) livePass.cancel();
+  if(p.trip){
+    // paint chunked offscreen, then display as three panels with wall showing through the gaps
+    const gapD=Math.round(curW*0.02);
+    canvas.width=curW+2*gapD; canvas.height=curH;       // resize (=clear) NOW: no stale image restyled while painting
+    const off=document.createElement('canvas'); off.width=curW; off.height=curH;
+    livePass=paintChunked(off.getContext('2d'),p,()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const pw=curW/3;
+      for(let k=0;k<3;k++) ctx.drawImage(off, k*pw,0,pw,curH, k*(pw+gapD),0,pw,curH);
+    });
+  }else{
+    canvas.width=curW; canvas.height=curH;
+    livePass=paintChunked(ctx,p);   // paints progressively onto the visible canvas
+  }
+  $('cat').textContent=`No. ${seed}${paintNo?'.'+paintNo:''} · mixed pigments on panel${p.trip?' · triptych':''} · ${curW} × ${curH}px · ${tiles.length} tiles`;
+}
+
+function rebuild(){
+  const p=params();
+  curW=CANVAS_W; curH=Math.round(CANVAS_W/p.aspect);
+  tiles=buildTiles(curW,curH,p);
+  render();
+}
+
+/* ---------- wiring ---------- */
+let pending=null, pendingRebuild=false;
+function schedule(needRebuild){
+  pendingRebuild=pendingRebuild||needRebuild;      // never let a paint tweak cancel a queued rebuild
+  if(pending) cancelAnimationFrame(pending);
+  pending=requestAnimationFrame(()=>{
+    const doRebuild=pendingRebuild;
+    pending=null; pendingRebuild=false;
+    doRebuild? rebuild():render();
+  });
+}
+document.querySelectorAll('input[type=range], input[type=checkbox], #aspect, #pattern, #sym, #orient').forEach(el=>{
+  el.addEventListener('input',()=>schedule(!!el.dataset.rebuild));
+});
+$('seed').addEventListener('change',()=>{
+  const v=parseInt($('seed').value,10);
+  if(Number.isFinite(v) && v>0){ seed=v; paintNo=0; colorSeed=seed*7+3; rebuild(); }
+});
+$('newBtn').addEventListener('click',()=>{
+  seed=1+Math.floor(Math.random()*999998);
+  paintNo=0; colorSeed=seed*7+3; $('seed').value=seed;
+  syncBrush();                             // the ceramic finish is fast: no draft step needed
+  rebuild();
+});
+/* Brushwork is a separate, final step: exploring designs stays instant, and adding strokes
+   repaints the SAME tiles and colours — layout and pigment never move. */
+function syncBrush(){
+  const off=$('flat').checked;
+  $('brushBtn').textContent= off? '◧ Flat color' : '◧ Ceramic finish';
+  $('brushBtn').classList.toggle('active',!off);
+}
+$('brushBtn').addEventListener('click',()=>{
+  $('flat').checked=!$('flat').checked;
+  syncBrush(); render();          // render(), not rebuild(): the design is already decided
+});
+$('recolorBtn').addEventListener('click',()=>{
+  // deterministic variant: No. seed.k is reproducible (enter seed, click Repaint k times)
+  paintNo++; colorSeed=ihash(seed,paintNo,0x5eed); render();
+});
+/* per-control locks: a locked control is skipped by Surprise me */
+const LOCKS=new Set();
+document.querySelectorAll('.ctl').forEach(ctl=>{
+  const inp=ctl.querySelector('input,select'); if(!inp||!inp.id) return;
+  const b=document.createElement('button');
+  b.className='lk'; b.type='button'; b.textContent='🔓';
+  b.title='Lock this setting so Surprise me leaves it alone';
+  b.addEventListener('click',()=>{
+    const on=!LOCKS.has(inp.id);
+    if(on) LOCKS.add(inp.id); else LOCKS.delete(inp.id);
+    b.textContent=on?'🔒':'🔓'; b.classList.toggle('on',on);
+  });
+  ctl.insertBefore(b,ctl.firstChild);
+});
+$('wildBtn').addEventListener('click',()=>{
+  // randomize every unlocked slider (canvas shape stays put), then roll a fresh seed
+  const R=(id,lo,hi,dec)=>{ if(LOCKS.has(id)) return;
+    $(id).value=(lo+Math.random()*(hi-lo)).toFixed(dec??2); };
+  R('tileSize',10,52,0); R('ribbon',0.15,0.7); R('patchScale',150,800,0);
+  if(!LOCKS.has('pattern')) $('pattern').value=['fields','tri','truchet'][Math.floor(Math.random()*3)];
+  if(!LOCKS.has('sym')) $('sym').value=['alt','mirror','point','free'][Math.floor(Math.random()*4)];
+  if(!LOCKS.has('stroke'))
+    $('stroke').value=['drag','cross','scumble','dabs','smooth','mixed'][Math.floor(Math.random()*6)];
+  R('visc',0,1); 
+  if(!LOCKS.has('panels')) $('panels').value=Math.floor(Math.random()*9);
+  R('gap',0.5,6,1);
+  R('cool',0,2.2); R('ember',0,2.2); R('darks',0,2.2); R('colorPatch',0,1);
+  R('jitter',0,1); R('runs',0,1);
+  R('brush',0,1); R('aging',0,1); R('craze',0,0.6); R('weave',0,0.5);
+  R('handmade',0,0.6); R('round',0,0.5); R('visc',0.1,0.9);
+  seed=1+Math.floor(Math.random()*999998);
+  paintNo=0; colorSeed=seed*7+3; $('seed').value=seed;
+  syncBrush();
+  rebuild();
+});
+/* ---- inspiration viewer: shows the original painting this GUI was built from ---- */
+const INSPIRATION_SRC=''; // the original painting, embedded
+const INSPO_KEY='mosaic_inspiration';
+let inspoOpen=false, savedCat='';
+function showInspoImg(src){ $('inspoImg').src=src; $('inspoImg').hidden=false; $('inspoEmpty').hidden=true; }
+if(INSPIRATION_SRC) showInspoImg(INSPIRATION_SRC);
+else{ try{ const d=localStorage.getItem(INSPO_KEY); if(d) showInspoImg(d); }catch(e){} }
+$('inspoFile').addEventListener('change',ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ showInspoImg(rd.result);
+    try{ localStorage.setItem(INSPO_KEY,rd.result); }catch(e){} };
+  rd.readAsDataURL(f);
+});
+$('inspoBtn').addEventListener('click',()=>{
+  inspoOpen=!inspoOpen;
+  $('inspo').hidden=!inspoOpen;
+  canvas.style.display=inspoOpen?'none':'block';
+  $('inspoBtn').textContent=inspoOpen?'Hide inspiration':'View inspiration';
+  $('inspoBtn').classList.toggle('active',inspoOpen);
+  if(inspoOpen){ savedCat=$('cat').textContent;
+    $('cat').textContent='The original painting · the inspiration for this generator'; }
+  else $('cat').textContent=savedCat;
+});
+/* ---- PNG recipe metadata -------------------------------------------------
+   Every export carries its own settings in a standard PNG tEXt chunk, so any
+   file can be reproduced later. Image viewers ignore the chunk; copying or
+   emailing the file keeps it (re-encoding elsewhere, e.g. a screenshot, loses
+   it, as does any tool that strips metadata). ------------------------------ */
+const CRCT=(()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; }
+  return t; })();
+function crc32(buf,start,end){ let c=0xFFFFFFFF;
+  for(let i=start;i<end;i++) c=CRCT[(c^buf[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0; }
+function pngAddText(bytes,key,val){
+  const pay=[];                                        // tEXt payload: keyword \0 latin-1 text
+  for(const ch of key) pay.push(ch.charCodeAt(0)&0xFF);
+  pay.push(0);
+  for(const ch of val) pay.push(ch.charCodeAt(0)&0xFF);
+  const len=pay.length, chunk=new Uint8Array(12+len), dv=new DataView(chunk.buffer);
+  dv.setUint32(0,len);
+  chunk[4]=0x74; chunk[5]=0x45; chunk[6]=0x58; chunk[7]=0x74;   // 'tEXt'
+  chunk.set(pay,8);
+  dv.setUint32(8+len,crc32(chunk,4,8+len));
+  const at=33;                                         // 8-byte signature + the whole IHDR chunk
+  const out=new Uint8Array(bytes.length+chunk.length);
+  out.set(bytes.subarray(0,at),0); out.set(chunk,at); out.set(bytes.subarray(at),at+chunk.length);
+  return out;
+}
+function pngGetText(bytes,key){
+  let off=8;                                           // walk the chunk list past the signature
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  while(off+8<=bytes.length){
+    const len=dv.getUint32(off);
+    const type=String.fromCharCode(bytes[off+4],bytes[off+5],bytes[off+6],bytes[off+7]);
+    if(type==='tEXt'){
+      let s=''; for(let i=off+8;i<off+8+len;i++) s+=String.fromCharCode(bytes[i]);
+      const z=s.indexOf('\0');
+      if(z>0 && s.slice(0,z)===key) return s.slice(z+1);
+    }
+    if(type==='IEND') break;
+    off+=12+len;
+  }
+  return null;
+}
+const META_KEY='MosaicMaker';
+function settingsJSON(){                               // every control that shapes the artwork
+  const o={v:1,seed:seed,paintNo:paintNo};
+  document.querySelectorAll('input,select').forEach(el=>{
+    if(!el.id || el.id==='seed' || el.type==='file') return;
+    o[el.id]= el.type==='checkbox'? el.checked : el.value;
+  });
+  return JSON.stringify(o);
+}
+function applySettings(o){
+  Object.keys(o).forEach(k=>{
+    if(k==='v'||k==='seed'||k==='paintNo') return;
+    const el=document.getElementById(k); if(!el) return;
+    if(el.type==='checkbox') el.checked=!!o[k]; else el.value=o[k];
+  });
+  if(Number.isFinite(o.seed)){ seed=o.seed; $('seed').value=seed; }
+  paintNo=Number.isFinite(o.paintNo)? o.paintNo : 0;
+  colorSeed= paintNo? ihash(seed,paintNo,0x5eed) : seed*7+3;   // matches the Repaint variant chain
+  syncBrush();
+  rebuild();
+}
+$('loadBtn').addEventListener('click',()=>$('metaFile').click());
+$('metaFile').addEventListener('change',ev=>{
+  const f=ev.target.files[0]; ev.target.value='';
+  if(!f) return;
+  f.arrayBuffer().then(ab=>{
+    const txt=pngGetText(new Uint8Array(ab),META_KEY);
+    if(!txt){ alert('No Mosaic Maker settings in that PNG — only files exported by this page carry their recipe.'); return; }
+    try{ applySettings(JSON.parse(txt)); }
+    catch(e){ alert('That PNG carries settings this version cannot read.'); }
+  }).catch(()=>alert('That file could not be read.'));
+});
+$('saveBtn').addEventListener('click',()=>{
+  const btn=$('saveBtn'), target=parseInt($('exportRes').value,10);
+  // lock the bench: the export pass reads the live layout/colors, so nothing may change mid-export
+  const ctrls=[...document.querySelectorAll('input,select,button')].filter(el=>!el.disabled);
+  ctrls.forEach(el=>el.disabled=true);
+  const unlock=()=>{ ctrls.forEach(el=>el.disabled=false); btn.textContent='Download PNG'; };
+  btn.textContent='Rendering…';
+  try{
+    const S=target/CANVAS_W;                       // same seeded artwork, scaled to print resolution
+    const p2=params();
+    const off=document.createElement('canvas');
+    off.width=Math.round(curW*S); off.height=Math.round(curH*S);
+    const c2=off.getContext('2d');
+    c2.scale(S,S);
+    const finishExport=()=>{                       // runs when the chunked paint completes
+      const stem=`mosaic_${seed}${paintNo?'_'+paintNo:''}`;
+      const meta=settingsJSON();                   // recipe captured before any download starts
+      const dl=(b,name)=>{ b.arrayBuffer().then(ab=>{
+        // stamp the settings into the PNG itself; fall back to the plain file if anything goes wrong
+        let out=b;
+        try{ out=new Blob([pngAddText(new Uint8Array(ab),META_KEY,meta)],{type:'image/png'}); }catch(e){}
+        const a=document.createElement('a');
+        a.download=name; a.href=URL.createObjectURL(out); a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+      }); };
+      const tooBig=()=>alert('Export failed — the canvas was too large for this browser. Try a smaller print size.');
+      if(p2.trip){
+        // triptych: exact-pixel thirds (integer cut boundaries, no rescaling), one file per panel
+        const xs=[0,1,2,3].map(k=>Math.round(k*off.width/3));
+        let doneN=0, failed=0;
+        for(let k=0;k<3;k++){
+          const pw=xs[k+1]-xs[k];
+          const pc=document.createElement('canvas'); pc.width=pw; pc.height=off.height;
+          pc.getContext('2d').drawImage(off, xs[k],0,pw,off.height, 0,0,pw,off.height);
+          pc.toBlob(b=>{
+            if(b) dl(b,`${stem}_panel${k+1}_${target}px.png`); else failed++;
+            if(++doneN===3){ if(failed) tooBig(); unlock(); }
+          },'image/png');
+        }
+      }else{
+        off.toBlob(b=>{
+          if(b) dl(b,`${stem}_${target}px.png`); else tooBig();
+          unlock();
+        },'image/png');
+      }
+    };
+    paintChunked(c2,p2,finishExport);              // time-sliced: the tab stays live during big exports
+  }catch(e){ unlock(); throw e; }
+});
+
+syncBrush();
+rebuild();
+</script>
