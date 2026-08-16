@@ -1,19 +1,15 @@
 # Mosaic Tile Generator
 
-Two browser-based generators for algorithmic mosaic art. Each is a single self-contained
-HTML file — no install, no build step, no internet connection required once loaded. Open the
-file (or the link below) and it runs.
+A browser-based generator for algorithmic mosaic art. It is a single self-contained HTML file —
+no install, no build step, no internet connection required once loaded. Open it and it runs.
 
-## Try them
+## Try it
 
-- **[Mosaic Maker](https://worldbyjoe.github.io/MosaicTileGenerator/)** — rectangular tile
-  mosaics with a simulated oil-paint surface.
-- **[Hex Mosaic Maker](https://worldbyjoe.github.io/MosaicTileGenerator/hex-mosaic-maker.html)** —
-  hexagonal tilings with three pattern engines and a glazed-ceramic finish.
+**[Mosaic Maker](https://worldbyjoe.github.io/MosaicTileGenerator/)**
 
-You can also just download either `.html` file and double-click it — they run offline.
+You can also download `index.html` and double-click it — it runs offline.
 
-## Mosaic Maker
+## How it works
 
 A recursive-subdivision tile painting generator. A smooth noise "detail map" decides where
 tiles should be large and where they break into fine speckle; the canvas is then cut
@@ -27,21 +23,13 @@ brush carries a paint load that depletes as it travels, so strokes break into dr
 fragments, and every stamp deposits into a height field that is lit once, globally, from the
 upper left.
 
-Controls cover composition, tile size distribution, palette weighting and finish. Notable
-options: golden-ratio tiles, triptych mode (exports three separate print files), six stroke
-styles, and print export up to 12000 px.
+## Hexagonal tiling
 
-## Hex Mosaic Maker
-
-Every hexagon is the same size — the interest lives in the pattern layer instead, which is how
-hexagonal tile design actually works. Three engines:
-
-- **Colour fields** — whole-hex colours drawn from the same palette machinery.
-- **Pinwheel triangles** — each hexagon split into six triangles under a symmetry rule.
-  Triangles from neighbouring hexes fuse across the seams into larger rhombi and stars.
-- **Truchet ribbons** — arcs joining edge midpoints, randomly rotated. Because the ends land
-  on the seam midpoints, neighbours continue each other's lines and ribbons cross the panel
-  from a purely local rule.
+Switching on **Hexagonal tiling** lays a uniform hex grid over the same design. Each hexagon
+takes the colour of whichever rectangle sits under its centre, so a large calm rectangle
+becomes a solid patch of hexagons while fine speckle varies hex by hex. The grid is a
+resampling filter over the composition, not a separate generator, so the palette, colour runs,
+patchiness and panel structure all carry through unchanged.
 
 ## Reproducing a piece
 
@@ -52,4 +40,6 @@ and pick any PNG the page exported to restore that exact artwork, sliders and al
 ## Printing
 
 The export menu offers sizes up to 12000 px, which is 40 inches at 300 dpi. Canvas shapes are
-labelled with the print sizes they fit. Triptych mode saves three separate files, one per panel.
+labelled with the print sizes they fit, in either landscape or portrait. **Split into panels**
+divides the piece into however many equal vertical panels the slider specifies and saves each
+one as its own file, ready to print as a matched set of canvases.
