@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"
+     role="img" aria-label="World by Joe">
+  <title>World by Joe</title>
+  <defs><clipPath id="wbjs"><circle cx="60" cy="60" r="52"/></clipPath></defs>
+  <circle cx="60" cy="60" r="52" fill="#2B2118"/>
+  <g clip-path="url(#wbjs)">
+   <g shape-rendering="crispEdges">
+    <rect x="21.00" y="8.00" width="13.00" height="13.00" fill="#469BA6"/>
+    <rect x="34.00" y="8.00" width="13.00" height="13.00" fill="#D9B441"/>
+    <rect x="47.00" y="8.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="60.00" y="8.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="73.00" y="8.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="86.00" y="8.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="8.00" y="21.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="21.00" y="21.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="34.00" y="21.00" width="13.00" height="13.00" fill="#C8992F"/>
+    <rect x="47.00" y="21.00" width="13.00" height="13.00" fill="#D9B441"/>
+    <rect x="60.00" y="21.00" width="13.00" height="13.00" fill="#C8992F"/>
+    <rect x="73.00" y="21.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="86.00" y="21.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="99.00" y="21.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="8.00" y="34.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="21.00" y="34.00" width="13.00" height="13.00" fill="#5AA3AE"/>
+    <rect x="34.00" y="34.00" width="13.00" height="13.00" fill="#C0522C"/>
+    <rect x="47.00" y="34.00" width="13.00" height="13.00" fill="#D9B441"/>
+    <rect x="60.00" y="34.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="73.00" y="34.00" width="13.00" height="13.00" fill="#469BA6"/>
+    <rect x="86.00" y="34.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="99.00" y="34.00" width="13.00" height="13.00" fill="#5AA3AE"/>
+    <rect x="8.00" y="47.00" width="13.00" height="13.00" fill="#469BA6"/>
+    <rect x="21.00" y="47.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="34.00" y="47.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="47.00" y="47.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="60.00" y="47.00" width="13.00" height="13.00" fill="#469BA6"/>
+    <rect x="73.00" y="47.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="86.00" y="47.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="99.00" y="47.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="8.00" y="60.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="21.00" y="60.00" width="13.00" height="13.00" fill="#5AA3AE"/>
+    <rect x="34.00" y="60.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="47.00" y="60.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="60.00" y="60.00" width="13.00" height="13.00" fill="#C0522C"/>
+    <rect x="73.00" y="60.00" width="13.00" height="13.00" fill="#D9B441"/>
+    <rect x="86.00" y="60.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="99.00" y="60.00" width="13.00" height="13.00" fill="#5AA3AE"/>
+    <rect x="8.00" y="73.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="21.00" y="73.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="34.00" y="73.00" width="13.00" height="13.00" fill="#5AA3AE"/>
+    <rect x="47.00" y="73.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="60.00" y="73.00" width="13.00" height="13.00" fill="#C8992F"/>
+    <rect x="73.00" y="73.00" width="13.00" height="13.00" fill="#B8862B"/>
+    <rect x="86.00" y="73.00" width="13.00" height="13.00" fill="#C8992F"/>
+    <rect x="99.00" y="73.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="8.00" y="86.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="21.00" y="86.00" width="13.00" height="13.00" fill="#469BA6"/>
+    <rect x="34.00" y="86.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="47.00" y="86.00" width="13.00" height="13.00" fill="#5AA3AE"/>
+    <rect x="60.00" y="86.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="73.00" y="86.00" width="13.00" height="13.00" fill="#C8992F"/>
+    <rect x="86.00" y="86.00" width="13.00" height="13.00" fill="#54A0AB"/>
+    <rect x="99.00" y="86.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="21.00" y="99.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="34.00" y="99.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="47.00" y="99.00" width="13.00" height="13.00" fill="#4E9AA6"/>
+    <rect x="60.00" y="99.00" width="13.00" height="13.00" fill="#D9B441"/>
+    <rect x="73.00" y="99.00" width="13.00" height="13.00" fill="#46909B"/>
+    <rect x="86.00" y="99.00" width="13.00" height="13.00" fill="#469BA6"/>
+   </g>
+  <g stroke="#2B2118" stroke-width="1.60" stroke-opacity="1.00" stroke-linecap="butt">
+    <line x1="60.00" y1="8.00" x2="60.00" y2="112.00"/>
+    <line x1="8.00" y1="60.00" x2="60.00" y2="60.00"/>
+    <line x1="60.00" y1="47.00" x2="112.00" y2="47.00"/>
+    <line x1="60.00" y1="73.00" x2="112.00" y2="73.00"/>
+  </g>
+  </g>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#2B2118" stroke-width="6"/>
+</svg>
