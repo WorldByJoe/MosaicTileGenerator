@@ -227,8 +227,14 @@
         <input type="checkbox" id="hexOn" data-rebuild="1"></div>
       <div class="ctl"><label>Hexagon size<small>hex tiling only</small></label>
         <input type="range" id="hexSize" data-rebuild="1" min="5" max="60" step="1" value="16"></div>
-      <div class="ctl"><label>Golden ratio<small>φ rectangles only</small></label>
-        <input type="checkbox" id="golden" data-rebuild="1"></div>
+      <div class="ctl sel"><label>Tile ratio<small>snap every tile to one proportion</small></label>
+        <select id="ratio" data-rebuild="1">
+          <option value="0" selected>Free · any proportion</option>
+          <option value="1.618034">Golden · φ ≈ 1.618:1</option>
+          <option value="1">Square · 1:1</option>
+          <option value="2">Brick · 2:1</option>
+          <option value="3">Plank · 3:1</option>
+        </select></div>
     </fieldset>
 
     <fieldset>
@@ -624,8 +630,8 @@
       big vs. tiny (zones, not uniform noise). "Smallest/Largest
       tile" bound the sizes; "Fine/Coarse coverage" shape the
       frequency distribution at each end (both high = bimodal).
-      "Golden ratio" steers cuts toward φ proportions and snaps
-      every drawn tile to an exact golden rectangle.
+      "Tile ratio" steers cuts toward one proportion (golden φ,
+      1:1, 2:1 or 3:1) and snaps every drawn tile to exactly it.
    2. The canvas is first pre-cut into a few slightly uneven
       full-height vertical panels ("Vertical panels"), like the
       source painting's panel seams; each panel is then cut
@@ -788,7 +794,7 @@ function params(){ return {
   maxTile:parseFloat($('maxTile').value),
   smallFreq:parseFloat($('smallFreq').value),
   bigFreq:parseFloat($('bigFreq').value),
-  golden:$('golden').checked,
+  ratio:parseFloat($('ratio').value)||0,   // 0 = free cuts; else the long:short proportion every tile snaps to
   hexOn:$('hexOn').checked,
   hexSize:parseFloat($('hexSize').value),
   split:$('split').checked,
@@ -934,10 +940,33 @@ function hexOverlay(W,H,p,rects){
   }
   return out;
 }
+/* ratio mode: the cols×rows grid whose cells come nearest the chosen proportion R.
+   Cells within 1.5% of R count as exact and win outright; otherwise every grid within
+   0.08 of the best fit competes. Fewest cells first, with a 30% chance of the runner-up
+   (halves vs. thirds, as Alignment does). On the default 3:1 / 5-panel canvas this keeps
+   the old golden courses of three; for 1:1, 2:1 and 3:1 it finds the lattice that tiles
+   the rect exactly, e.g. 3×5 squares or 6×5 bricks in a 5:3 panel. null = no grid that
+   clears the Smallest-tile floor fits R as well as the rect already does (an exact brick
+   too small to quarter must stay whole, not become two squares), so the caller keeps it. */
+function ratioGrid(r,R,minT,rng){
+  const fit=(w,h)=>{ const a=w>=h? w/h : h/w; return Math.min(a,R)/Math.max(a,R); };  // area the snap keeps
+  const cand=[];
+  for(let c=1;c<=9;c++) for(let q=1;q<=9;q++){            // up to 9 so a 3:1 plank can turn (9×1), at most 36 cells
+    if(c*q<2 || c*q>36) continue;
+    const cw=r.w/c, ch=r.h/q;
+    if(Math.min(cw,ch)<minT) continue;
+    cand.push({c,q,n:c*q,kept:fit(cw,ch)});
+  }
+  let best=0; for(const k of cand) best=Math.max(best,k.kept);
+  if(!cand.length || best<fit(r.w,r.h)-0.02) return null;
+  for(let i=cand.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [cand[i],cand[j]]=[cand[j],cand[i]]; }  // random order breaks ties
+  const pool=cand.filter(k=> best>=0.985? k.kept>=0.985 : k.kept>=best-0.08).sort((u,v)=>u.n-v.n);
+  return (pool.length>1 && rng()<0.3)? pool[1] : pool[0];
+}
 function buildTiles(W,H,p){
   const rng=mulberry32(ihash(seed,11,977));
   const out=[]; const stack=[];
-  const PHI=1.618034;
+  const R=p.ratio;                                     // fixed tile proportion, 0 = free
   if(p.panels>=2){
     // uneven full-height panels; small inset widens their seams beyond ordinary grout
     const wts=[]; let tot=0;
@@ -947,11 +976,16 @@ function buildTiles(W,H,p){
       stack.push({x:px+1.5,y:0,w:pw-3,h:H}); px+=pw; }
   } else stack.push({x:0,y:0,w:W,h:H});
   const maxT=Math.max(p.maxTile,p.minTile*1.6), minT=Math.max(6,Math.min(p.minTile,maxT/1.5));
-  const emitG=(r)=>{                                     // golden mode: split far-from-φ leaves into near-φ strips
-    if(!p.golden){ out.push(r); return; }                //   (else the draw-time snap would leave bare-grout voids)
+  const emitG=(r)=>{                                     // ratio mode: split far-from-R leaves into near-R strips
+    if(!R){ out.push(r); return; }                       //   (else the draw-time snap would leave bare-grout voids)
     const vert=r.w>=r.h, L=vert?r.w:r.h, C=vert?r.h:r.w;
-    let n=Math.max(1,Math.round(L/(C*PHI)));
-    if(n===1 && L/C<Math.SQRT2) n=2;                     // near-square: two slim halves beat one 38% crop
+    // try n equal strips across the long side and keep the n the snap crops least:
+    // a strip of aspect a keeps min(a,R)/max(a,R) of its area. For φ this reproduces
+    // the old round(L/(C·φ)) rule and its √2 near-square cutoff; for 1:1 a square stays whole.
+    let n=1, best=-1;
+    const nMax=Math.max(1,Math.floor(L/(0.7*minT)));     // strips never thinner than the old φ halves
+    for(let q=1;q<=nMax;q++){ const s=L/q, a=s>=C? s/C : C/s, kept=Math.min(a,R)/Math.max(a,R);
+      if(kept>best+1e-9){ best=kept; n=q; } }
     for(let q=0;q<n;q++) out.push(vert? {x:r.x+L*q/n,y:r.y,w:L/n,h:r.h}
                                       : {x:r.x,y:r.y+L*q/n,w:r.w,h:L/n});
   };
@@ -966,16 +1000,18 @@ function buildTiles(W,H,p){
     const target=maxT*Math.pow(minT/maxT, d);        // local tile size the zone wants
     const maxDim=Math.max(r.w,r.h);
     const canSplit=maxDim>Math.max(2*minT,target);
-    if(!p.golden && canSplit && maxDim<target*3.2 && rng()<0.06){ out.push(r); continue; } // rare big feature tile (off in golden mode: odd aspects crop badly)
+    if(!R && canSplit && maxDim<target*3.2 && rng()<0.06){ out.push(r); continue; } // rare big feature tile (off in ratio mode: odd aspects crop badly)
     if(!canSplit){
       // detailed zones sometimes burst into a neat grid of tiny squares
       if(d>0.5 && rng()<p.burst && r.w>18 && r.h>18){
         const cell=Math.max(6,minT);
         // floor() + fall-through: burst cells never dip below the Smallest-tile floor
         let cols=clamp(Math.floor(r.w/cell),1,14), rows=clamp(Math.floor(r.h/cell),1,14);
-        if(p.golden){                                    // golden cells must fit at least twice per axis
-          rows=clamp(Math.floor(r.h/cell),1,14);
-          cols=rows>1? Math.min(14,Math.round(r.w/((r.h/rows)*PHI))):0;
+        if(R){                                           // R:1 cells, long side along the rect's long side; must fit at least twice per axis
+          if(r.w>=r.h){ rows=clamp(Math.floor(r.h/cell),1,14);
+            cols=rows>1? Math.min(14,Math.round(r.w/((r.h/rows)*R))):0; }
+          else{ cols=clamp(Math.floor(r.w/cell),1,14);
+            rows=cols>1? Math.min(14,Math.round(r.h/((r.w/cols)*R))):0; }
         }
         if(cols>1 && rows>1 && cols*rows>3){
           const cw=r.w/cols, ch=r.h/rows, gid=out.length;  // gid tags this grid so coloring can checker it
@@ -986,19 +1022,19 @@ function buildTiles(W,H,p){
       }
       emitG(r); continue;
     }
+    if(R){                                               // ratio mode: regular grid, or a leaf if none fits the floor
+      const g=ratioGrid(r,R,minT,rng);
+      if(!g){ emitG(r); continue; }
+      const cw=r.w/g.c, ch=r.h/g.q;
+      for(let i=0;i<g.c;i++) for(let j=0;j<g.q;j++) stack.push({x:r.x+i*cw,y:r.y+j*ch,w:cw,h:ch});
+      continue;
+    }
     // cut the long way; "Alignment" prefers exact halves/thirds so seams line up
     let vert=r.w>r.h;
-    if(!p.golden && Math.abs(r.w-r.h)<0.15*maxDim && Math.min(r.w,r.h)>2*minT && rng()<0.5) vert=!vert;
+    if(Math.abs(r.w-r.h)<0.15*maxDim && Math.min(r.w,r.h)>2*minT && rng()<0.5) vert=!vert;
     const L=vert?r.w:r.h, C=vert?r.h:r.w;
     let cuts;
-    if(p.golden){
-      // aim children at golden proportions: child length ≈ φ×cross (or cross/φ for slim courses)
-      let k=Math.round(L/(C*PHI));
-      if(k<2) k=Math.max(2,Math.round(L*PHI/C));
-      k=Math.max(2,Math.min(k,6,Math.floor(L/minT)||2));
-      cuts=[]; for(let q=1;q<k;q++) cuts.push(L*q/k);
-    }
-    else if(rng()<p.align){ const parts=(rng()<0.7||L<3*minT)?2:3; cuts=[];
+    if(rng()<p.align){ const parts=(rng()<0.7||L<3*minT)?2:3; cuts=[];
       for(let k=1;k<parts;k++) cuts.push(L*k/parts); }
     else cuts=[L*clamp(0.33+0.34*rng(), minT/L, 1-minT/L)];  // both pieces stay >= the floor
     let prev=0;
@@ -1114,8 +1150,8 @@ function drawTile(sf,p,i){     // one tile, fully self-contained: every stream i
       ca=Math.cos(t.ang); sa=Math.sin(t.ang); ccx=t.cx+jx; ccy=t.cy+jy;
     }else{
     let tx=t.x,ty=t.y,tw=t.w,th=t.h;
-    if(p.golden){                                        // snap the drawn tile to an exact golden rectangle
-      const PHI=1.618034, asp=tw/th, tgt=asp>=1?PHI:1/PHI;
+    if(p.ratio){                                         // snap the drawn tile to an exact R:1 rectangle, centred in its cell
+      const R=p.ratio, asp=tw/th, tgt=asp>=1?R:1/R;
       if(asp>tgt){ const nw=th*tgt; tx+=(tw-nw)/2; tw=nw; }
       else{ const nh=tw/tgt; ty+=(th-nh)/2; th=nh; }
     }
@@ -1441,7 +1477,7 @@ function schedule(needRebuild){
     doRebuild? rebuild():render();
   });
 }
-document.querySelectorAll('input[type=range], input[type=checkbox], #aspect, #stroke, #orient').forEach(el=>{
+document.querySelectorAll('input[type=range], input[type=checkbox], #aspect, #stroke, #orient, #ratio').forEach(el=>{
   el.addEventListener('input',()=>schedule(!!el.dataset.rebuild));
 });
 const syncPanels=()=>{ const n=parseInt($('panels').value,10);
@@ -1491,7 +1527,8 @@ $('wildBtn').addEventListener('click',()=>{
   const R=(id,lo,hi,dec)=>{ if(LOCKS.has(id)) return;
     $(id).value=(lo+Math.random()*(hi-lo)).toFixed(dec??2); };
   R('minTile',6,40,0); R('maxTile',60,400,0); R('smallFreq',0,1); R('bigFreq',0,1);
-  if(!LOCKS.has('golden')) $('golden').checked=Math.random()<0.15;
+  if(!LOCKS.has('ratio'))                  // mostly free cuts; now and then one fixed proportion
+    $('ratio').value= Math.random()<0.7? '0' : ['1.618034','1','2','3'][Math.floor(Math.random()*4)];
   if(!LOCKS.has('stroke'))
     $('stroke').value=['drag','cross','scumble','dabs','smooth','mixed'][Math.floor(Math.random()*6)];
   R('visc',0,1); R('patchScale',120,900,0);
@@ -1583,6 +1620,7 @@ function settingsJSON(){                               // every control that sha
   return JSON.stringify(o);
 }
 function applySettings(o){
+  if(o.ratio===undefined && 'golden' in o) o.ratio= o.golden? '1.618034' : '0';   // PNGs saved before the Tile ratio control
   Object.keys(o).forEach(k=>{
     if(k==='v'||k==='seed'||k==='paintNo') return;
     const el=document.getElementById(k); if(!el) return;

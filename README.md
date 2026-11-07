@@ -33,6 +33,14 @@ becomes a solid patch of hexagons while fine speckle varies hex by hex. The grid
 resampling filter over the composition, not a separate generator, so the palette, colour runs,
 patchiness and panel structure all carry through unchanged.
 
+## Tile ratio
+
+**Tile ratio** holds every tile to one proportion: golden (φ ≈ 1.618:1), square (1:1),
+brick (2:1) or plank (3:1). Cuts are steered so children come out near that proportion,
+leaves that still miss it are split into equal strips that come closer, and each drawn tile
+is then snapped to the exact ratio and centred in its cell. Tiles run either way, so a brick
+field mixes wide and tall bricks. **Free**, the default, leaves cuts unconstrained.
+
 ## Reproducing a piece
 
 Every artwork is generated from a seed, so the same settings always produce the same image.
